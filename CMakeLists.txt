@@ -86,7 +86,7 @@ set(Boost_ADDITIONAL_VERSIONS
 find_package(Boost COMPONENTS ${BOOST_REQUIRED_COMPONENTS})
 
 if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost required to compile limesdr")
+    message(FATAL_ERROR "Boost required to build " ${CMAKE_PROJECT_NAME})
 endif()
 
 ########################################################################
@@ -101,7 +101,7 @@ if(NOT CMAKE_MODULES_DIR)
 endif(NOT CMAKE_MODULES_DIR)
 
 set(GR_INCLUDE_DIR      include/limesdr)
-set(GR_CMAKE_DIR        ${CMAKE_MODULES_DIR}/howto)
+set(GR_CMAKE_DIR        ${CMAKE_MODULES_DIR}/limesdr)
 set(GR_PKG_DATA_DIR     ${GR_DATA_DIR}/${CMAKE_PROJECT_NAME})
 set(GR_PKG_DOC_DIR      ${GR_DOC_DIR}/${CMAKE_PROJECT_NAME})
 set(GR_PKG_CONF_DIR     ${GR_CONF_DIR}/${CMAKE_PROJECT_NAME}/conf.d)
