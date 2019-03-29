@@ -22,11 +22,9 @@
 ########################################################################
 include(GrPlatform) #define LIB_SUFFIX
 
-include_directories(${Boost_INCLUDE_DIR} 
-		    ${LIMESUITE_INCLUDE_DIRS} 
+include_directories(${LIMESUITE_INCLUDE_DIRS} 
 		    ${CMAKE_CURRENT_BINARY_DIR})
-link_directories(${Boost_LIBRARY_DIRS} 
-		 ${LIMESDR_PKG_LIBRARY_DIRS})
+link_directories(${LIMESDR_PKG_LIBRARY_DIRS})
 
 list(APPEND limesdr_sources
     source_impl.cc
@@ -42,10 +40,13 @@ endif(NOT limesdr_sources)
 
 add_library(gnuradio-limesdr SHARED ${limesdr_sources})
 target_link_libraries(
-  gnuradio-limesdr 
-  ${Boost_LIBRARIES} 
-  ${GNURADIO_ALL_LIBRARIES} 
+  gnuradio-limesdr
+  gnuradio::gnuradio-runtime
   ${LIMESUITE_LIB})
+target_include_directories(gnuradio-limesdr
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    PUBLIC $<INSTALL_INTERFACE:include>
+  )
   
 set_target_properties(
   gnuradio-limesdr PROPERTIES DEFINE_SYMBOL "gnuradio_limesdr_EXPORTS")

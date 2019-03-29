@@ -20,7 +20,7 @@
 ########################################################################
 # Project setup
 ########################################################################
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.8)
 project(gr-limesdr CXX C)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -28,6 +28,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
+
+#install to PyBOMBS target prefix if defined
+if(DEFINED ENV{PYBOMBS_PREFIX})
+    set(CMAKE_INSTALL_PREFIX $ENV{PYBOMBS_PREFIX})
+    message(STATUS "PyBOMBS installed GNU Radio. Setting CMAKE_INSTALL_PREFIX to $ENV{PYBOMBS_PREFIX}")
+endif()
 
 #select the release build type by default to get optimization flags
 if(NOT CMAKE_BUILD_TYPE)
@@ -39,10 +45,13 @@ set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "")
 #make sure our local CMake Modules path comes first
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 
+cmake_policy(SET CMP0011 NEW)
 ########################################################################
 # Compiler specific setup
 ########################################################################
-if(CMAKE_COMPILER_IS_GNUCXX AND NOT WIN32)
+if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+    CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    AND NOT WIN32)
     #http://gcc.gnu.org/wiki/Visibility
     add_definitions(-fvisibility=hidden)
 endif()
@@ -55,6 +64,9 @@ MESSAGE(STATUS "Configuring Boost C++ Libraries...")
 SET(BOOST_REQUIRED_COMPONENTS
     thread
     system
+    program_options
+    filesystem
+    regex
 )
 
 if(UNIX AND EXISTS "/usr/lib64")
@@ -80,19 +92,20 @@ endif()
 ########################################################################
 # Install directories
 ########################################################################
+find_package(Gnuradio "3.8" REQUIRED)
+include(GrVersion)
 include(GrPlatform) #define LIB_SUFFIX
-set(GR_RUNTIME_DIR      bin)
-set(GR_LIBRARY_DIR      lib${LIB_SUFFIX})
+
+if(NOT CMAKE_MODULES_DIR)
+  set(CMAKE_MODULES_DIR lib${LIB_SUFFIX}/cmake)
+endif(NOT CMAKE_MODULES_DIR)
+
 set(GR_INCLUDE_DIR      include/limesdr)
-set(GR_DATA_DIR         share)
+set(GR_CMAKE_DIR        ${CMAKE_MODULES_DIR}/howto)
 set(GR_PKG_DATA_DIR     ${GR_DATA_DIR}/${CMAKE_PROJECT_NAME})
-set(GR_DOC_DIR          ${GR_DATA_DIR}/doc)
 set(GR_PKG_DOC_DIR      ${GR_DOC_DIR}/${CMAKE_PROJECT_NAME})
-set(GR_CONF_DIR         etc)
 set(GR_PKG_CONF_DIR     ${GR_CONF_DIR}/${CMAKE_PROJECT_NAME}/conf.d)
-set(GR_LIBEXEC_DIR      libexec)
 set(GR_PKG_LIBEXEC_DIR  ${GR_LIBEXEC_DIR}/${CMAKE_PROJECT_NAME})
-set(GRC_BLOCKS_DIR      ${GR_PKG_DATA_DIR}/grc/blocks)
 
 ########################################################################
 # On Apple only, set install name and use rpath correctly, if not already set
@@ -117,19 +130,7 @@ endif(APPLE)
 ########################################################################
 # Find gnuradio build dependencies
 ########################################################################
-# Search for GNU Radio and its components and versions. Add any
-# components required to the list of GR_REQUIRED_COMPONENTS (in all
-# caps such as FILTER or FFT) and change the version to the minimum
-# API compatible version required.
 find_package(Doxygen)
-
-MESSAGE(STATUS "Configuring GNU Radio C++ Libraries...")
-set(GR_REQUIRED_COMPONENTS RUNTIME PMT)
-set(MIN_GR_VERSION "3.7.8")
-find_package(Gnuradio REQUIRED)
-if("${Gnuradio_VERSION}" VERSION_LESS MIN_GR_VERSION)
-    MESSAGE(FATAL_ERROR "GnuRadio version required: >=\"" ${MIN_GR_VERSION} "\" found: \"" ${Gnuradio_VERSION} "\"")
-endif()
 
 ########################################################################
 # Find LimeSuite
@@ -157,10 +158,11 @@ message(STATUS "Found LimeSuite: ${LIMESUITE_INCLUDE_DIRS}, ${LIMESUITE_LIB}")
 # Setup doxygen option
 ########################################################################
 if(DOXYGEN_FOUND)
-	option(ENABLE_DOXYGEN "Build docs using Doxygen" ON)
+    option(ENABLE_DOXYGEN "Build docs using Doxygen" ON)
 else(DOXYGEN_FOUND)
-	option(ENABLE_DOXYGEN "Build docs using Doxygen" OFF)
+    option(ENABLE_DOXYGEN "Build docs using Doxygen" OFF)
 endif(DOXYGEN_FOUND)
+
 ########################################################################
 # Setup the include and linker paths
 ########################################################################
@@ -169,14 +171,10 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/lib
     ${CMAKE_BINARY_DIR}/include
-    ${Boost_INCLUDE_DIRS}
-    ${GNURADIO_ALL_INCLUDE_DIRS}
     ${LIMESUITE_INCLUDE_DIRS}
 )
 
 link_directories(
-    ${Boost_LIBRARY_DIRS}
-    ${GNURADIO_RUNTIME_LIBRARY_DIRS}
     ${LIMESUITE_LIB}
 )
 
@@ -194,18 +192,19 @@ configure_file(
 
 add_custom_target(uninstall
     ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
-)
+    )
+
 
 ########################################################################
 # Add subdirectories
 ########################################################################
 add_subdirectory(include/limesdr)
 add_subdirectory(lib)
+add_subdirectory(apps)
+add_subdirectory(docs)
 add_subdirectory(swig)
 add_subdirectory(python)
 add_subdirectory(grc)
-add_subdirectory(apps)
-add_subdirectory(docs)
 
 ########################################################################
 # Install cmake search helper for this library
